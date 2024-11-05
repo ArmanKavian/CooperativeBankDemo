@@ -1,0 +1,159 @@
+openapi: 3.0.0
+info:
+  title: CoBank Service API
+  version: 1.0.0
+  description: API for managing bank accounts, balances, and transactions.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /accounts:
+    post:
+      summary: Create a new bank account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        201:
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAccountResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /balance/{iban}:
+    get:
+      summary: Fetch account balance
+      parameters:
+        - name: iban
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Z0-9]{15,34}$"
+          description: The IBAN of the account
+      responses:
+        200:
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+        404:
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /transactions:
+    post:
+      summary: Handle deposits and withdrawals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        200:
+          description: Transaction successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    CreateAccountRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - firstName
+        - address
+        - email
+
+    CreateAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        iban:
+          type: string
+        address:
+          type: string
+
+    BalanceResponse:
+      type: object
+      properties:
+        iban:
+          type: string
+        balance:
+          type: number
+          format: double
+
+    TransactionRequest:
+      type: object
+      properties:
+        iban:
+          type: string
+        amount:
+          type: number
+          format: double
+        type:
+          type: string
+          enum: [deposit, withdrawal]
+      required:
+        - iban
+        - amount
+        - type
+
+    TransactionResponse:
+      type: object
+      properties:
+        iban:
+          type: string
+        balance:
+          type: number
+          format: double
+
+    ErrorResponse:
+      type: object
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal
