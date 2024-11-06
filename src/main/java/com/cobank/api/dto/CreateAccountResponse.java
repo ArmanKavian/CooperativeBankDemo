@@ -1,7 +1,9 @@
 package com.cobank.api.dto;
 
+import java.util.UUID;
+
 public record CreateAccountResponse(
-        String id,
+        UUID id,
         String iban,
         String address
 ) {
