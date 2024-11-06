@@ -2,6 +2,7 @@ package com.cobank.service;
 
 import com.cobank.api.dto.CreateAccountRequest;
 import com.cobank.api.dto.CreateAccountResponse;
+import com.cobank.api.dto.FetchBalanceResponse;
 import com.cobank.domain.Account;
 import com.cobank.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,5 +81,41 @@ class AccountServiceTest {
         assertFalse(response.isPresent());
 
         verify(accountRepository, times(1)).save(any(Account.class));
+    }
+
+    @Test
+    void getBalanceByIban_ShouldReturnFetchBalanceResponse_WhenAccountExists() {
+        // Arrange
+        String iban = "NL00COOP1234567890";
+        Account mockAccount = Account.builder()
+                .id(UUID.randomUUID())
+                .iban(iban)
+                .balance(501.0)
+                .build();
+
+        when(accountRepository.findByIban(iban)).thenReturn(Optional.of(mockAccount));
+
+        // Act
+        Optional<FetchBalanceResponse> balanceResponse = accountService.getBalanceByIban(iban);
+
+        // Assert
+        assertTrue(balanceResponse.isPresent());
+        assertEquals(iban, balanceResponse.get().iban());
+        assertEquals(501.0, balanceResponse.get().balance());
+        verify(accountRepository, times(1)).findByIban(iban);
+    }
+
+    @Test
+    void getBalanceByIban_ShouldReturnEmpty_WhenAccountDoesNotExist() {
+        // Arrange
+        String iban = "NL00COOP1234567890";
+        when(accountRepository.findByIban(iban)).thenReturn(Optional.empty());
+
+        // Act
+        Optional<FetchBalanceResponse> balanceResponse = accountService.getBalanceByIban(iban);
+
+        // Assert
+        assertFalse(balanceResponse.isPresent());
+        verify(accountRepository, times(1)).findByIban(iban);
     }
 }

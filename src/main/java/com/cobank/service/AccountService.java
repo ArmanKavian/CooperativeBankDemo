@@ -3,16 +3,22 @@ package com.cobank.service;
 
 import com.cobank.api.dto.CreateAccountRequest;
 import com.cobank.api.dto.CreateAccountResponse;
+import com.cobank.api.dto.FetchBalanceResponse;
 import com.cobank.domain.Account;
 import com.cobank.repository.AccountRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
 @Service
-public class AccountService implements CreateAccountUseCase {
+public class AccountService implements
+        CreateAccountUseCase,
+        FetchBalanceUseCase {
 
     private final AccountRepository accountRepository;
     private final IbanService ibanService;
@@ -22,6 +28,10 @@ public class AccountService implements CreateAccountUseCase {
         this.ibanService = ibanService;
     }
 
+    @Transactional(
+            isolation = Isolation.SERIALIZABLE,
+            propagation = Propagation.REQUIRED,
+            timeout = 15)
     @Override
     public Optional<CreateAccountResponse> createAccount(CreateAccountRequest request) {
         // Call iban service
@@ -40,11 +50,26 @@ public class AccountService implements CreateAccountUseCase {
                 .map(toCreateAccountResponse());
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<FetchBalanceResponse> getBalanceByIban(String iban) {
+        return Optional.ofNullable(iban)
+                .flatMap(accountRepository::findByIban)
+                .map(toFetchBalanceResponse());
+    }
+
     private Function<Account, CreateAccountResponse> toCreateAccountResponse() {
         return account -> new CreateAccountResponse(
                 account.getId(),
                 account.getIban(),
                 account.getAddress()
+        );
+    }
+
+    private Function<Account, FetchBalanceResponse> toFetchBalanceResponse() {
+        return account -> new FetchBalanceResponse(
+                account.getIban(),
+                account.getBalance()
         );
     }
 }
