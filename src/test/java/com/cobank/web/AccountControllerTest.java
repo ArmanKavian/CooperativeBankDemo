@@ -2,7 +2,9 @@ package com.cobank.web;
 
 import com.cobank.api.dto.CreateAccountRequest;
 import com.cobank.api.dto.CreateAccountResponse;
+import com.cobank.api.dto.FetchBalanceResponse;
 import com.cobank.service.CreateAccountUseCase;
+import com.cobank.service.FetchBalanceUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -27,6 +30,9 @@ class AccountControllerTest {
 
     @MockBean
     private CreateAccountUseCase createAccountUseCase;
+
+    @MockBean
+    private FetchBalanceUseCase fetchBalanceUseCase;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -82,5 +88,31 @@ class AccountControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void getBalance_ShouldReturnFetchBalanceResponseDTO_WhenAccountExists() throws Exception {
+        String iban = "NL00COOP1234567890";
+        double balance = 500.0;
+        FetchBalanceResponse balanceResponse = new FetchBalanceResponse(iban, balance);
+
+        when(fetchBalanceUseCase.getBalanceByIban(iban)).thenReturn(Optional.of(balanceResponse));
+
+        mockMvc.perform(get("/accounts/balance/{iban}", iban)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.iban").value(iban))
+                .andExpect(jsonPath("$.balance").value(balance));
+    }
+
+    @Test
+    void getBalance_ShouldReturn404_WhenAccountDoesNotExist() throws Exception {
+        String iban = "NL00COOP1234567890";
+
+        when(fetchBalanceUseCase.getBalanceByIban(iban)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/accounts/balance/{iban}", iban)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
     }
 }
