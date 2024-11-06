@@ -25,6 +25,9 @@ class AccountServiceTest {
     @Mock
     private AccountRepository accountRepository;
 
+    @Mock
+    private IbanService ibanService;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -35,9 +38,13 @@ class AccountServiceTest {
         // Arrange
         CreateAccountRequest request = new CreateAccountRequest("Arman", "Beethovenstraat 7", "arman@mymail.com");
 
+        String generatedIban = "NL00COOP1234567890";
+        when(ibanService.generateIban()).thenReturn(generatedIban);
+
+
         Account mockAccount = Account.builder()
                 .id(UUID.randomUUID())
-                .iban("NL123456789")
+                .iban(generatedIban)
                 .firstName("Arman")
                 .address("Beethovenstraat 7")
                 .email("arman@mymail.com")

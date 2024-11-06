@@ -15,14 +15,17 @@ import java.util.function.Function;
 public class AccountService implements CreateAccountUseCase {
 
     private final AccountRepository accountRepository;
+    private final IbanService ibanService;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, IbanService ibanService) {
         this.accountRepository = accountRepository;
+        this.ibanService = ibanService;
     }
 
     @Override
     public Optional<CreateAccountResponse> createAccount(CreateAccountRequest request) {
-        String iban = "NL" + (int) (Math.random() * 1_000_000_000L);
+        // Call iban service
+        String iban = ibanService.generateIban();
 
         Account account = Account.builder()
                 .id(UUID.randomUUID())
