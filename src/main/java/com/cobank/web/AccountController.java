@@ -11,8 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional;
-
 @RestController
 public class AccountController implements
         AccountApi,
@@ -27,16 +25,16 @@ public class AccountController implements
     }
 
     @Override
-    public ResponseEntity<Optional<CreateAccountResponse>> createAccount(CreateAccountRequest request) {
+    public ResponseEntity<CreateAccountResponse> createAccount(CreateAccountRequest request) {
         return createAccountUseCase.createAccount(request)
-                .map(response -> new ResponseEntity<>(Optional.of(response), HttpStatus.CREATED))
-                .orElse(new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
     }
 
     @Override
     public ResponseEntity<FetchBalanceResponse> getBalance(String iban) {
         return fetchBalanceUseCase.getBalanceByIban(iban)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 }
