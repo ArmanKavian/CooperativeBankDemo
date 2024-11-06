@@ -6,10 +6,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import java.util.Optional;
 
 public interface AccountApi {
 
     @PostMapping("/accounts")
-    ResponseEntity<Optional<CreateAccountResponse>> createAccount(@Valid @RequestBody CreateAccountRequest request);
+    ResponseEntity<CreateAccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest request);
 }

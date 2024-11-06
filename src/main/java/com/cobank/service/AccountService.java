@@ -1,11 +1,10 @@
 package com.cobank.service;
 
 
-import com.cobank.api.dto.CreateAccountRequest;
-import com.cobank.api.dto.CreateAccountResponse;
-import com.cobank.api.dto.FetchBalanceResponse;
+import com.cobank.api.dto.*;
 import com.cobank.domain.Account;
 import com.cobank.repository.AccountRepository;
+import com.cobank.service.iban.IbanService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -29,7 +28,7 @@ public class AccountService implements
     }
 
     @Transactional(
-            isolation = Isolation.SERIALIZABLE,
+            isolation = Isolation.REPEATABLE_READ,
             propagation = Propagation.REQUIRED,
             timeout = 15)
     @Override

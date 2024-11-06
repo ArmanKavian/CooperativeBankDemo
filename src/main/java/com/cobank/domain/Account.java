@@ -1,11 +1,7 @@
 package com.cobank.domain;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -34,6 +30,7 @@ public class Account {
     @Column(nullable = false)
     private String email;
 
+    @Setter
     @Column(nullable = false)
     private double balance;
 }

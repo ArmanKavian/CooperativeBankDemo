@@ -1,4 +1,4 @@
-package com.cobank.service;
+package com.cobank.service.iban;
 
 
 import org.springframework.stereotype.Service;
