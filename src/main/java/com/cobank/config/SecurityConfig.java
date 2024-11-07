@@ -25,12 +25,22 @@ public class SecurityConfig {
     @Value("${app.security.password}")
     private String password;
 
+    @Value("${springdoc.api-docs.path}")
+    private String apiDocsPath;
+
+    @Value("${springdoc.swagger-ui.path}")
+    private String swaggerPath;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/public/**",
+                                "/swagger-ui/**",
+                                apiDocsPath +"/**",
+                                swaggerPath
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
 
