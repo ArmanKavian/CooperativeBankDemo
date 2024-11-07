@@ -1,10 +1,9 @@
 package com.cobank.web;
 
-import com.cobank.api.dto.CreateAccountRequest;
-import com.cobank.api.dto.CreateAccountResponse;
-import com.cobank.api.dto.FetchBalanceResponse;
+import com.cobank.api.dto.*;
 import com.cobank.service.CreateAccountUseCase;
 import com.cobank.service.FetchBalanceUseCase;
+import com.cobank.service.ProcessTransactionUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,8 +33,14 @@ class AccountControllerTest {
     @MockBean
     private FetchBalanceUseCase fetchBalanceUseCase;
 
+    @MockBean
+    private ProcessTransactionUseCase processTransactionUseCase;
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    private final TransactionRequest transactionRequest = new TransactionRequest(
+            "NL00COOP1234567890", TransactionType.DEPOSIT, 100.0);
 
     @Test
     void createAccount_ShouldReturn201_WhenValidRequest() throws Exception {
@@ -114,5 +119,48 @@ class AccountControllerTest {
         mockMvc.perform(get("/accounts/balance/{iban}", iban)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void processTransaction_ShouldReturn200_WhenTransactionIsSuccessful() throws Exception {
+        // Arrange
+        TransactionResponse response = new TransactionResponse("NL00COOP1234567890", 1100.0, "Transaction processed successfully");
+        when(processTransactionUseCase.processTransaction(any(TransactionRequest.class))).thenReturn(Optional.of(response));
+
+        // Act & Assert
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(transactionRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.iban").value(transactionRequest.iban()))
+                .andExpect(jsonPath("$.newBalance").value(1100.0))
+                .andExpect(jsonPath("$.description").value("Transaction processed successfully"));
+    }
+
+    @Test
+    void processTransaction_ShouldReturn500_WhenTransactionFails() throws Exception {
+        // Arrange
+        when(processTransactionUseCase.processTransaction(any(TransactionRequest.class))).thenReturn(Optional.empty());
+
+        // Act & Assert
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(transactionRequest)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.iban").value(transactionRequest.iban()))
+                .andExpect(jsonPath("$.newBalance").value(-1.0))
+                .andExpect(jsonPath("$.description").value("Transaction failed"));
+    }
+
+    @Test
+    void processTransaction_ShouldReturn400_WhenRequestIsInvalid() throws Exception {
+        // Arrange
+        TransactionRequest invalidRequest = new TransactionRequest("NL00COOP1234567890", TransactionType.DEPOSIT, -100.0);
+
+        // Act & Assert
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 }
