@@ -25,9 +25,9 @@ public class AccountService implements
     private final IbanService ibanService;
 
     @Transactional(
-            isolation = Isolation.REPEATABLE_READ,
+            isolation = Isolation.SERIALIZABLE,
             propagation = Propagation.REQUIRED,
-            timeout = 15)
+            timeout = 10)
     @Override
     public Optional<CreateAccountResponse> createAccount(CreateAccountRequest request) {
         // Call iban service
