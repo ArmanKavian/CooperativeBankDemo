@@ -77,6 +77,53 @@ paths:
           $ref: '#/components/responses/BadRequest'
         500:
           $ref: '#/components/responses/InternalServerError'
+  /api/transactions/history/{iban}:
+    get:
+      summary: Retrieve transaction history
+      description: Retrieve paginated transaction history for a specific IBAN.
+      parameters:
+        - in: path
+          name: iban
+          required: true
+          schema:
+            type: string
+          description: IBAN of the account to fetch transaction history for.
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Page number for pagination.
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Page size for pagination.
+      responses:
+        '200':
+          description: Transaction history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionHistoryResponse'
+                  pageable:
+                    type: object
+                  totalElements:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  last:
+                    type: boolean
+        '404':
+          description: IBAN not found or no transaction history exists
 
 components:
   schemas:
@@ -124,7 +171,7 @@ components:
           format: double
         type:
           type: string
-          enum: [deposit, withdrawal]
+          enum: [ deposit, withdrawal ]
       required:
         - iban
         - amount
@@ -139,7 +186,28 @@ components:
           type: number
           format: double
         description:
-          type : string
+          type: string
+
+    TransactionHistoryResponse:
+      type: object
+      properties:
+        iban:
+          type: string
+        transactionType:
+          type: string
+          enum: [ DEPOSIT, WITHDRAWAL ]
+        amount:
+          type: number
+          format: double
+        resultingBalance:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        description:
+          type: string
+          nullable: true
 
     ErrorResponse:
       type: object
