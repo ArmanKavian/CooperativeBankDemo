@@ -5,6 +5,7 @@ import com.cobank.api.dto.*;
 import com.cobank.domain.Account;
 import com.cobank.repository.AccountRepository;
 import com.cobank.service.iban.IbanService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -15,17 +16,13 @@ import java.util.UUID;
 import java.util.function.Function;
 
 @Service
+@RequiredArgsConstructor
 public class AccountService implements
         CreateAccountUseCase,
         FetchBalanceUseCase {
 
     private final AccountRepository accountRepository;
     private final IbanService ibanService;
-
-    public AccountService(AccountRepository accountRepository, IbanService ibanService) {
-        this.accountRepository = accountRepository;
-        this.ibanService = ibanService;
-    }
 
     @Transactional(
             isolation = Isolation.REPEATABLE_READ,
