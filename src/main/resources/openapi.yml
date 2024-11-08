@@ -18,16 +18,26 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateAccountRequest'
+            examples:
+              validRequest:
+                value:
+                  firstName: "Ludwig Beethoven"
+                  address: "Beethovenstraat 9"
+                  email: "ludwig.beethoven@mymail.com"
       responses:
-        201:
+        '201':
           description: Account created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateAccountResponse'
-        400:
+              example:
+                id: "1f67eec5-f705-4fd8-b2d5-67c75b019c59"
+                iban: "NL00COOP1234567890"
+                address: "Beethovenstraat 9"
+        '400':
           $ref: '#/components/responses/BadRequest'
-        500:
+        '500':
           $ref: '#/components/responses/InternalServerError'
 
   /balance/{iban}:
@@ -42,19 +52,25 @@ paths:
             pattern: "^[A-Z0-9]{15,34}$"
           description: The IBAN of the account
       responses:
-        200:
+        '200':
           description: Balance retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BalanceResponse'
-        404:
+              example:
+                iban: "NL00COOP1234567890"
+                balance: 1050.75
+        '404':
           description: Account not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        500:
+              example:
+                errorCode: "404"
+                message: "Account not found"
+        '500':
           $ref: '#/components/responses/InternalServerError'
 
   /transactions:
@@ -66,17 +82,101 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/TransactionRequest'
+            examples:
+              deposit:
+                value:
+                  iban: "NL00COOP1234567890"
+                  amount: 150.00
+                  type: "deposit"
+              withdrawal:
+                value:
+                  iban: "NL00COOP1234567890"
+                  amount: 50.00
+                  type: "withdrawal"
       responses:
-        200:
+        '200':
           description: Transaction successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionResponse'
-        400:
+              example:
+                iban: "NL00COOP1234567890"
+                balance: 1200.00
+                description: "Transaction processed successfully"
+        '400':
           $ref: '#/components/responses/BadRequest'
-        500:
+        '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /api/transactions/history/{iban}:
+    get:
+      summary: Retrieve transaction history
+      description: Retrieve paginated transaction history for a specific IBAN.
+      parameters:
+        - in: path
+          name: iban
+          required: true
+          schema:
+            type: string
+          description: IBAN of the account to fetch transaction history for.
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Page number for pagination.
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Page size for pagination.
+      responses:
+        '200':
+          description: Transaction history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionHistoryResponse'
+                  pageable:
+                    type: object
+                  totalElements:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  last:
+                    type: boolean
+              example:
+                content:
+                  - iban: "NL00COOP1234567890"
+                    transactionType: "DEPOSIT"
+                    amount: 100.0
+                    resultingBalance: 1100.0
+                    timestamp: "2024-11-08T10:30:00Z"
+                    description: "Monthly salary deposit"
+                  - iban: "NL00COOP1234567890"
+                    transactionType: "WITHDRAWAL"
+                    amount: 50.0
+                    resultingBalance: 1050.0
+                    timestamp: "2024-11-07T15:45:00Z"
+                    description: "ATM withdrawal"
+        '404':
+          description: IBAN not found or no transaction history exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: "404"
+                message: "IBAN not found"
 
 components:
   schemas:
@@ -124,7 +224,7 @@ components:
           format: double
         type:
           type: string
-          enum: [deposit, withdrawal]
+          enum: [ deposit, withdrawal ]
       required:
         - iban
         - amount
@@ -139,7 +239,28 @@ components:
           type: number
           format: double
         description:
-          type : string
+          type: string
+
+    TransactionHistoryResponse:
+      type: object
+      properties:
+        iban:
+          type: string
+        transactionType:
+          type: string
+          enum: [ DEPOSIT, WITHDRAWAL ]
+        amount:
+          type: number
+          format: double
+        resultingBalance:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        description:
+          type: string
+          nullable: true
 
     ErrorResponse:
       type: object
@@ -156,6 +277,16 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: "400"
+            message: "Invalid request data"
 
     InternalServerError:
-      description: Internal
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: "500"
+            message: "An unexpected error occurred. Please contact support."

@@ -39,7 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/public/**",
                                 "/swagger-ui/**",
                                 apiDocsPath +"/**",
-                                swaggerPath
+                                swaggerPath,
+                                "/h2-console/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

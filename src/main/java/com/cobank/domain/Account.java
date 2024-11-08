@@ -18,7 +18,7 @@ public class Account {
     @Column(updatable = false, nullable = false)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String iban;
 
     @Column(nullable = false)
@@ -27,7 +27,7 @@ public class Account {
     @Column(nullable = false)
     private String address;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Setter

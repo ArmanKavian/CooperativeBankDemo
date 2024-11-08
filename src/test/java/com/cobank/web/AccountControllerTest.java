@@ -3,6 +3,7 @@ package com.cobank.web;
 import com.cobank.api.dto.*;
 import com.cobank.service.CreateAccountUseCase;
 import com.cobank.service.FetchBalanceUseCase;
+import com.cobank.service.GetTransactionHistoryUseCase;
 import com.cobank.service.ProcessTransactionUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -11,15 +12,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,6 +47,9 @@ class AccountControllerTest {
 
     @MockBean
     private ProcessTransactionUseCase processTransactionUseCase;
+
+    @MockBean
+    private GetTransactionHistoryUseCase getTransactionHistoryUseCase;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -187,5 +197,33 @@ class AccountControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, basicAuthHeader("invalidUser", "invalidPassword"))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getTransactionHistory_ShouldReturnPagedTransactionHistory_WhenTransactionsExist() throws Exception {
+        final String iban = "NL00COOP1234567890";
+        TransactionHistoryResponse transaction1 = new TransactionHistoryResponse(
+                iban, TransactionType.DEPOSIT, 100.0, 1100.0, LocalDateTime.now().minusDays(1), "Deposit");
+        TransactionHistoryResponse transaction2 = new TransactionHistoryResponse(
+                iban, TransactionType.WITHDRAWAL, 50.0, 1050.0, LocalDateTime.now().minusDays(2), "Withdrawal");
+
+        List<TransactionHistoryResponse> transactions = List.of(transaction1, transaction2);
+        PageImpl<TransactionHistoryResponse> pagedResponse = new PageImpl<>(transactions, PageRequest.of(0, 2), 2);
+
+        when(getTransactionHistoryUseCase.getTransactionHistory(eq(iban), any(Pageable.class))).thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/accounts/{iban}/transactions", iban)
+                        .param("page", "0")
+                        .param("size", "2")
+                        .header("Authorization", basicAuthHeader())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].iban").value(iban))
+                .andExpect(jsonPath("$.content[0].transactionType").value("DEPOSIT"))
+                .andExpect(jsonPath("$.content[0].amount").value(100.0))
+                .andExpect(jsonPath("$.content[0].resultingBalance").value(1100.0))
+                .andExpect(jsonPath("$.content[1].transactionType").value("WITHDRAWAL"))
+                .andExpect(jsonPath("$.content[1].amount").value(50.0))
+                .andExpect(jsonPath("$.content[1].resultingBalance").value(1050.0));
     }
 }
