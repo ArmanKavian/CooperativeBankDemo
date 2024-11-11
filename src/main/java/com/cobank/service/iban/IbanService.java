@@ -1,6 +1,5 @@
 package com.cobank.service.iban;
 
-import com.cobank.repository.AccountRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
@@ -38,7 +37,7 @@ public class IbanService {
 
     private long getNextAccountSequence() {
         Query query = entityManager.createNativeQuery(
-                "SELECT NEXT VALUE FOR account_sequence"
+                "SELECT nextval('account_sequence')"
         );
         return ((Number) query.getSingleResult()).longValue();
     }

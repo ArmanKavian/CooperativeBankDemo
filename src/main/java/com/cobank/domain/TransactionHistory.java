@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -24,18 +25,18 @@ public class TransactionHistory {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 34)
     private String iban;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private TransactionType transactionType;
 
-    @Column(nullable = false)
-    private double amount;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount;
 
-    @Column(nullable = false)
-    private double resultingBalance;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal resultingBalance;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;

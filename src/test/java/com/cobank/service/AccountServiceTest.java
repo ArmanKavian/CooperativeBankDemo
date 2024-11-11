@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,7 +51,7 @@ class AccountServiceTest {
                 .firstName("Arman")
                 .address("Beethovenstraat 7")
                 .email("arman@mymail.com")
-                .balance(0.0)
+                .balance(BigDecimal.ZERO)
                 .build();
 
         when(accountRepository.save(any(Account.class))).thenReturn(mockAccount);
@@ -91,7 +92,7 @@ class AccountServiceTest {
         Account mockAccount = Account.builder()
                 .id(UUID.randomUUID())
                 .iban(iban)
-                .balance(501.0)
+                .balance(BigDecimal.valueOf(501.0))
                 .build();
 
         when(accountRepository.findByIban(iban)).thenReturn(Optional.of(mockAccount));
@@ -102,7 +103,7 @@ class AccountServiceTest {
         // Assert
         assertTrue(balanceResponse.isPresent());
         assertEquals(iban, balanceResponse.get().iban());
-        assertEquals(501.0, balanceResponse.get().balance());
+        assertEquals(0, BigDecimal.valueOf(501.0).compareTo(balanceResponse.get().balance()));
         verify(accountRepository, times(1)).findByIban(iban);
     }
 

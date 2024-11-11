@@ -1,4 +1,6 @@
 package com.cobank.api.dto;
 
-public record FetchBalanceResponse(String iban, double balance) {
+import java.math.BigDecimal;
+
+public record FetchBalanceResponse(String iban, BigDecimal balance) {
 }

@@ -6,6 +6,7 @@ import com.cobank.service.FetchBalanceUseCase;
 import com.cobank.service.GetTransactionHistoryUseCase;
 import com.cobank.service.ProcessTransactionUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +19,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -34,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Testcontainers
 class AccountControllerTest {
 
     @Autowired
@@ -61,7 +67,13 @@ class AccountControllerTest {
     private String password;
 
     private final TransactionRequest transactionRequest = new TransactionRequest(
-            "NL00COOP1234567890", TransactionType.DEPOSIT, 100.0);
+            "NL00COOP1234567890", TransactionType.DEPOSIT, BigDecimal.valueOf(100.0));
+
+    @Container
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest")
+            .withDatabaseName("cobankdb_test")
+            .withUsername("postgres")
+            .withPassword("postgres");
 
     private String basicAuthHeader() {
         return basicAuthHeader(username, password);
@@ -70,6 +82,14 @@ class AccountControllerTest {
     private String basicAuthHeader(String username, String password) {
         String auth = username + ":" + password;
         return "Basic " + Base64.getEncoder().encodeToString(auth.getBytes());
+    }
+
+    @BeforeAll
+    public static void init() {
+        postgres.start();
+        System.setProperty("spring.datasource.url", postgres.getJdbcUrl());
+        System.setProperty("spring.datasource.username", postgres.getUsername());
+        System.setProperty("spring.datasource.password", postgres.getPassword());
     }
 
     @Test
@@ -125,7 +145,7 @@ class AccountControllerTest {
     @Test
     void getBalance_ShouldReturnFetchBalanceResponse_WhenAccountExists() throws Exception {
         String iban = "NL00COOP1234567890";
-        double balance = 500.0;
+        BigDecimal balance = BigDecimal.valueOf(500.0);
         FetchBalanceResponse balanceResponse = new FetchBalanceResponse(iban, balance);
 
         when(fetchBalanceUseCase.getBalanceByIban(iban)).thenReturn(Optional.of(balanceResponse));
@@ -152,7 +172,7 @@ class AccountControllerTest {
 
     @Test
     void processTransaction_ShouldReturn200_WhenTransactionIsSuccessful() throws Exception {
-        TransactionResponse response = new TransactionResponse("NL00COOP1234567890", 1100.0, "Transaction processed successfully");
+        TransactionResponse response = new TransactionResponse("NL00COOP1234567890", BigDecimal.valueOf(1100.0), "Transaction processed successfully");
 
         when(processTransactionUseCase.processTransaction(any(TransactionRequest.class))).thenReturn(Optional.of(response));
 
@@ -182,7 +202,7 @@ class AccountControllerTest {
 
     @Test
     void processTransaction_ShouldReturn400_WhenRequestIsInvalid() throws Exception {
-        TransactionRequest invalidRequest = new TransactionRequest("NL00COOP1234567890", TransactionType.DEPOSIT, -100.0);
+        TransactionRequest invalidRequest = new TransactionRequest("NL00COOP1234567890", TransactionType.DEPOSIT, BigDecimal.valueOf(-100.0));
 
         mockMvc.perform(post("/transactions")
                         .header("Authorization", basicAuthHeader())
@@ -203,9 +223,9 @@ class AccountControllerTest {
     void getTransactionHistory_ShouldReturnPagedTransactionHistory_WhenTransactionsExist() throws Exception {
         final String iban = "NL00COOP1234567890";
         TransactionHistoryResponse transaction1 = new TransactionHistoryResponse(
-                iban, TransactionType.DEPOSIT, 100.0, 1100.0, LocalDateTime.now().minusDays(1), "Deposit");
+                iban, TransactionType.DEPOSIT, BigDecimal.valueOf(100.0), BigDecimal.valueOf(1100.0), LocalDateTime.now().minusDays(1), "Deposit");
         TransactionHistoryResponse transaction2 = new TransactionHistoryResponse(
-                iban, TransactionType.WITHDRAWAL, 50.0, 1050.0, LocalDateTime.now().minusDays(2), "Withdrawal");
+                iban, TransactionType.WITHDRAWAL, BigDecimal.valueOf(50.0), BigDecimal.valueOf(1050.0), LocalDateTime.now().minusDays(2), "Withdrawal");
 
         List<TransactionHistoryResponse> transactions = List.of(transaction1, transaction2);
         PageImpl<TransactionHistoryResponse> pagedResponse = new PageImpl<>(transactions, PageRequest.of(0, 2), 2);

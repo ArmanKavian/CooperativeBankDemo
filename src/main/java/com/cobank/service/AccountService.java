@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -39,7 +40,7 @@ public class AccountService implements
                 .firstName(request.firstName())
                 .address(request.address())
                 .email(request.email())
-                .balance(0.0) // Initial balance
+                .balance(BigDecimal.ZERO) // Initial balance
                 .build();
 
         return Optional.ofNullable(accountRepository.save(account))

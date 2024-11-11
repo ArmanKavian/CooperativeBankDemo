@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequiredArgsConstructor
 public class AccountController implements
@@ -40,7 +42,7 @@ public class AccountController implements
         return fetchBalanceUseCase.getBalanceByIban(iban)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        new FetchBalanceResponse(iban, -1.0)));
+                        new FetchBalanceResponse(iban, BigDecimal.valueOf(-1.0))));
     }
 
     @Override
@@ -48,7 +50,7 @@ public class AccountController implements
         return processTransactionUseCase.processTransaction(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.internalServerError().body(
-                        new TransactionResponse(request.iban(), -1, "Transaction failed")));
+                        new TransactionResponse(request.iban(), BigDecimal.valueOf(-1.0), "Transaction failed")));
     }
 
     @Override

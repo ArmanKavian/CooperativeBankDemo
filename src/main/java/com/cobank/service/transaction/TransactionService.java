@@ -13,6 +13,7 @@ import com.cobank.service.ProcessTransactionUseCase;
 import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.postgresql.util.PSQLException;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
@@ -26,22 +27,25 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TransactionService implements
-        ProcessTransactionUseCase,
-        GetTransactionHistoryUseCase {
+public class TransactionService implements ProcessTransactionUseCase, GetTransactionHistoryUseCase {
 
     private final AccountRepository accountRepository;
     private final TransactionHistoryRepository transactionHistoryRepository;
 
     @Override
     @Retryable(
-            retryFor = {CannotAcquireLockException.class, PessimisticLockException.class},
+            retryFor = {
+                    CannotAcquireLockException.class,
+                    PessimisticLockException.class,
+                    PSQLException.class
+            },
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2) // Exponential backoff
     )
@@ -56,18 +60,18 @@ public class TransactionService implements
                     .map(account -> executeTransaction(request, account));
         } catch (IllegalArgumentException ex) {
             log.error("Transaction failed due to invalid input: IBAN={}, Error={}", request.iban(), ex.getMessage());
-            return Optional.of(new TransactionResponse(request.iban(), -1, "Invalid transaction amount"));
+            return Optional.of(new TransactionResponse(request.iban(), BigDecimal.valueOf(-1), "Invalid transaction amount"));
         } catch (DataAccessException ex) {
             log.error("Database error during transaction processing for IBAN={}: {}", request.iban(), ex.getMessage(), ex);
-            return Optional.of(new TransactionResponse(request.iban(), -1, "Database error, please try again later"));
+            return Optional.of(new TransactionResponse(request.iban(), BigDecimal.valueOf(-1), "Database error, please try again later"));
         }
     }
 
     private TransactionResponse executeTransaction(TransactionRequest request, Account account) {
         log.info("Executing transaction for IBAN={}, Type={}, Amount={}", request.iban(), request.type(), request.amount());
 
-        double initialBalance = account.getBalance();
-        double newBalance = applyTransaction(request, account);
+        BigDecimal initialBalance = account.getBalance();
+        BigDecimal newBalance = applyTransaction(request, account);
 
         recordTransactionHistory(account.getIban(), request.type(), request.amount(), newBalance,
                 String.format("%s transaction of %.2f", request.type(), request.amount()));
@@ -78,16 +82,18 @@ public class TransactionService implements
         return new TransactionResponse(account.getIban(), newBalance, "Transaction processed successfully");
     }
 
-    private double applyTransaction(TransactionRequest request, Account account) {
+    private BigDecimal applyTransaction(TransactionRequest request, Account account) {
         log.debug("Applying {} transaction for IBAN={} with amount={}", request.type(), account.getIban(), request.amount());
 
+        BigDecimal amount = request.amount();
+
         if (request.type() == TransactionType.DEPOSIT) {
-            account.setBalance(account.getBalance() + request.amount());
+            account.setBalance(account.getBalance().add(amount));
         } else if (request.type() == TransactionType.WITHDRAWAL) {
-            if (account.getBalance() < request.amount()) {
+            if (account.getBalance().compareTo(amount) < 0) {
                 throw new IllegalArgumentException("Insufficient funds for withdrawal.");
             }
-            account.setBalance(account.getBalance() - request.amount());
+            account.setBalance(account.getBalance().subtract(amount));
         }
         accountRepository.save(account);
         log.debug("Transaction applied successfully for IBAN={}. New balance={}", account.getIban(), account.getBalance());
@@ -97,7 +103,7 @@ public class TransactionService implements
     private void validateRequestAmount(TransactionRequest request) {
         log.debug("Validating transaction amount for IBAN={} with amount={}", request.iban(), request.amount());
 
-        if (request.amount() <= 0) {
+        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("Invalid transaction amount for IBAN={}: {}", request.iban(), request.amount());
             throw new IllegalArgumentException("Transaction amount must be positive.");
         }
@@ -108,13 +114,13 @@ public class TransactionService implements
         log.error("Transaction failed after retries due to lock acquisition issues for IBAN={}, Type={}, Amount={}. Error: {}",
                 request.iban(), request.type(), request.amount(), ex.getMessage(), ex);
 
-        return Optional.of(new TransactionResponse(request.iban(), -1,
+        return Optional.of(new TransactionResponse(request.iban(), BigDecimal.valueOf(-1),
                 "Transaction could not be completed after multiple attempts. Please try again later."));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
     public TransactionHistory recordTransactionHistory(String iban, TransactionType transactionType,
-                                                       double amount, double resultingBalance, String description) {
+                                                       BigDecimal amount, BigDecimal resultingBalance, String description) {
         log.debug("Recording transaction history for IBAN={}, Type={}, Amount={}, New Balance={}",
                 iban, transactionType, amount, resultingBalance);
 
