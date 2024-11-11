@@ -4,7 +4,7 @@ The CoBank Service API manages core banking operations, providing RESTful endpoi
 
 ## Technologies Used
 
-This project uses Spring Boot for REST API development, Spring Data JPA for database interactions, Spring Cache for performance optimization, and Spring Retry for handling transient failures. H2 is employed for data storage, with Flyway migrations facilitating easy setup and versioning. OpenAPI 3.0 provides interactive API documentation via Swagger UI, and Docker is used to simplify deployment and testing.
+This project uses Spring Boot for REST API development, Spring Data JPA for database interactions, Spring Cache for performance optimization, and Spring Retry for handling transient failures. Postgres is employed for data storage, with Flyway migrations facilitating easy setup and versioning. OpenAPI 3.0 provides interactive API documentation via Swagger UI, and Docker is used to simplify deployment and testing.
 
 ## How to Run
 
